@@ -1,9 +1,8 @@
 import numpy as np
-import math
-from scipy.ndimage import gaussian_filter
-from scipy.ndimage.filters import convolve
-from scipy.interpolate import interp2d
 import cv2
+import math
+from scipy.ndimage import map_coordinates
+from scipy.ndimage import gaussian_filter
 
 from drawplot import draw_image
 
@@ -50,6 +49,7 @@ def generate_pyramid(base_img, num_octave, s, sigma, subsample):
         DOG_pyr.append(dog_per_octave)
         h, w = gaussain_per_octave[-1].shape
         base_img = cv2.resize(gaussain_per_octave[-1], (w//2, h//2), interpolation=cv2.INTER_NEAREST)
+        # base_img = gaussain_per_octave[-1].resize((w//2, h//2), Image.NEAREST)
         if i > 0:
             subsample.append(subsample[-1]*2)
 
@@ -242,10 +242,10 @@ def assign_orientation(kp_pyr, gaussain_pyr, s, num_octave, subsample):
                     peak_value, peak_idx = np.max(peaks), np.argmax(peaks)
 
     for i in range(len(pos)):
-        print(i, pos[i], orient[i], scale[i][2])
+        print(i, np.asarray(pos[i]), orient[i], scale[i][2])
 
     # print(len(kp_pyr[0][0]), len(grad_pyr[0][0])) shape is the same
-    return
+    return np.asarray(pos), np.asarray(orient), np.asarray(scale)
 """
 Code to extract feature descriptors for the keypoints.
 The descriptors are a grid of gradient orientation histograms, where the sampling
@@ -253,4 +253,82 @@ grid for the histograms is rotated to the main orientation of each keypoint.  Th
 grid is a 4x4 array of 4x4 sample cells of 8 bin orientation histograms.  This 
 procduces 128 dimensional feature vectors.
 """
+def generate_descriptor(kp_pos, gaussain_pyr, orient, scale, subsample):
+    # The orientation histograms have 8 bins, each bin has pi/4 size
+    orient_bin_spacing = np.pi / 4
+    orient_angles = np.arange(-np.pi, np.pi, orient_bin_spacing)
+    print(orient_angles)
 
+    # The feature grid is has 4x4 cells - feat_grid describes the cell center positions
+    grid_spacing = 4
+    x_coords, y_coords = np.meshgrid(np.arange(-6, 7, grid_spacing), np.arange(-6, 7, grid_spacing))
+    feat_grid = np.array((x_coords.flatten(), y_coords.flatten()))
+    x_coords, y_coords = np.meshgrid(np.arange(-(2*grid_spacing-0.5), 2*grid_spacing+0.5), np.arange(-(2*grid_spacing-0.5), 2*grid_spacing+0.5))
+    feat_samples = np.array((x_coords.flatten(), y_coords.flatten()))
+    feat_window = 2 * grid_spacing
+
+    # Initialize the descriptor list to the empty matrix.
+    desc = []
+    # look over all keypoints
+    for k in range(kp_pos.shape[0]):
+        x = kp_pos[k, 0] / subsample[int(scale[k, 0])]
+        y = kp_pos[k, 1] / subsample[int(scale[k, 0])]
+        # Rotate the grid coordinate
+        # np.dot(M, feat_grid) -> rotate, + np.tile -> move to right position
+        M = np.array([[math.cos(orient[k]), -math.sin(orient[k])],
+            [math.sin(orient[k]), math.cos(orient[k])]])
+        feat_rotate_grid = np.dot(M, feat_grid) + np.tile(np.array([[x],[y]]), (1, feat_grid.shape[1]))
+        feat_rotate_samples = np.dot(M, feat_samples) + np.tile(np.array([[x],[y]]), (1, feat_samples.shape[1]))
+        # print(feat_rotate_grid.shape, feat_rotate_samples.shape)
+        # Initialize the feature descriptor
+        feat_desc = np.zeros((128,))
+
+        # look over all the samples in the sampling grid    
+        for s_idx in range(feat_rotate_samples.shape[1]):
+            x_sample = feat_rotate_samples[0, s_idx]
+            y_sample = feat_rotate_samples[1, s_idx]
+            # Interpolate the gradient at the sample position (surrounding sample pos)
+            X, Y = np.meshgrid(np.arange(x_sample-1, x_sample+2), np.arange(y_sample-1, y_sample+2))
+            G = map_coordinates(gaussain_pyr[int(scale[k,0])][int(scale[k,1])], [Y, X], order=1, prefilter=False)
+            G[np.isnan(G)] = 0
+            diff_x = 0.5 * (G[1,2] - G[1,0])
+            diff_y = 0.5 * (G[2,1] - G[0,1])
+            mag_sample = np.sqrt(diff_x**2 + diff_y**2)
+            grad_sample = np.arctan2(diff_y, diff_x)
+            if grad_sample == np.pi:
+                grad_sample = -np.pi
+
+            # Compute the weighting for the x and y dimensions.
+            x_weight = np.maximum(1 - (np.abs(feat_rotate_grid[0, :] - x_sample) / grid_spacing), 0)
+            y_weight = np.maximum(1 - (np.abs(feat_rotate_grid[1, :] - y_sample) / grid_spacing), 0)
+            pos_weight = np.reshape(np.tile(x_weight * y_weight, (8, 1)), (1, 128))
+            # Compute the weighting for the orientation, rotating the gradient to the
+            # main orientation to of the keypoint first, and then computing the difference
+            # in angle to the histogram bin mod pi.
+            diff = np.mod(grad_sample - orient[k] - orient_angles + np.pi, 2 * np.pi) - np.pi
+            orient_weight = np.maximum(1 - np.abs(diff) / orient_bin_spacing, 0)
+            orient_weight = np.tile(orient_weight, (1, 16))
+
+            # Compute the gaussian weighting.
+            offset = (x_sample - x, y_sample - y)
+            g = np.exp(-(offset[0]**2 + offset[1]**2) / (2*feat_window**2)) / (2*np.pi*feat_window**2)
+
+            # Accumulate the histogram bins.
+            feat_desc += pos_weight[0] * orient_weight[0] * g * mag_sample
+        # Normalize the feature descriptor to a unit vector to make the descriptor invariant to affine changes in illumination.
+        feat_desc /= np.linalg.norm(feat_desc)
+        # Threshold the large components in the descriptor to 0.2 and then renormalize 
+        # to reduce the influence of large gradient magnitudes on the descriptor.
+        feat_desc[np.where(feat_desc > 0.2)] = 0.2
+        feat_desc /= np.linalg.norm(feat_desc)
+        desc.append(feat_desc)
+
+    # Adjust for the sample offset
+    for k in range(kp_pos.shape[0]):
+        kp_pos[k,:] -= subsample[int(scale[k,0])]-1
+
+    # Return only the absolute scale
+    # if kp_pos.shape[0] > 0:
+    #     scale = scale[:,2]
+
+    return kp_pos, np.array(desc)
