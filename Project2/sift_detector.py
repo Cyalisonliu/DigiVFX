@@ -10,7 +10,7 @@ from drawplot import draw_image, draw_keypoint
 
 
 class SIFT(object):
-    def __init__(self, img, s=3, num_octave=4, sigma=1.6, curvature_threshold=10, contrast_threshold=2.0, w=16):
+    def __init__(self, img, s=3, num_octave=3, sigma=1.8, curvature_threshold=7.0, contrast_threshold=4.0):
         # Blur the image with a standard deviation of 0.5
         # Upsample the image by a factor of 2 using linear interpolation
         # draw_image(img,'Original image')
@@ -34,7 +34,6 @@ class SIFT(object):
         self.num_octave = num_octave
         self.contrast_threshold = contrast_threshold
         self.curvature_threshold = (curvature_threshold+1)**2 / curvature_threshold
-        self.w = w
 
     def get_features(self):
         """
@@ -51,16 +50,13 @@ class SIFT(object):
         """
         kp_pyr, raw_keypoints, contrast_keypoints, curve_keypoints = get_keypoints(DOG_pyr, self.num_octave, self.s, subsample, self.contrast_threshold, self.curvature_threshold)
         # draw_keypoint(self.img, raw_keypoints, contrast_keypoints, curve_keypoints)
-        # print(len(kp_pyr))
-        # print(len(kp_pyr[0]))
-        # print(len(kp_pyr[1]))
+
         """
             3. Assign orientations to the keypoints and get descriptor
         """
-        feats = []
         kp_pyr, orient, scale = assign_orientation(kp_pyr, gaussian_pyr, self.s, self.num_octave, subsample)
         kp_pyr, descriptor = generate_descriptor(kp_pyr, gaussian_pyr, orient, scale, subsample)
-        print(kp_pyr.shape, descriptor.shape)
+        # print(kp_pyr.shape, descriptor.shape)
         # draw_keypoint(self.img, kp_pyr)
 
         return kp_pyr, descriptor

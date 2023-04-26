@@ -1,10 +1,13 @@
 import numpy as np
 from PIL import Image
+import cv2
 
 from sift_detector import SIFT
 from feature_matching import kd_tree_matching
-from generate_panorama import RANSAC
+from image_matching import RANSAC
+from wraping import warping, stitching
 from drawplot import plot_matches
+import matplotlib.pyplot as plt
 
 import argparse
 import pickle
@@ -16,37 +19,43 @@ if __name__ == '__main__':
 	parser.add_argument('--input_path', type=str, default='./parrington/prtn10.jpg', help='Input image file path')
 	args = parser.parse_args()
 
-	# img = np.asarray(Image.open(args.input_path).convert('L'), dtype = 'float32')
-	# # img = cv2.imread(args.input_path, 0).astype('float32') / 255
-	# print(img.shape)
+	image_path = ['./photos/DSC_{}.jpg'.format(i) for i in range(6136, 6143)]
+	offsets = [[0,0]]
+	previous_img = None
+	next_img = None
 
-	# sift_detector = SIFT(img)
-	# _ = sift_detector.get_features()
-	# kp_pyr = sift_detector.kp_pyr
+	for idx in range(1, len(image_path)):
+		# 1. Apply SIFT to do feature detection
+		print('[SIFT} Detecting features...')
+		if idx == 1:
+			previous_img = np.asarray(Image.open(image_path[idx-1]).convert('L'), dtype = 'float32')
+			next_img = np.asarray(Image.open(image_path[idx]).convert('L'), dtype = 'float32')
+			sift_detector1 = SIFT(previous_img)
+			sift_detector2 = SIFT(next_img)
+			keypints1, descriptors1 = sift_detector1.get_features()
+			keypints2, descriptors2 = sift_detector2.get_features()
+		else:
+			previous_img = next_img
+			keypints1, descriptors1 = keypints2, descriptors2
+			next_img = np.asarray(Image.open(image_path[idx]).convert('L'), dtype = 'float32')
+			sift_detector2 = SIFT(next_img)
+			keypints2, descriptors2 = sift_detector2.get_features()
+		print('{} features are extracted in image with id={}'.format(descriptors1.shape[0], idx))
+		print('{} features are extracted in image with id={}'.format(descriptors2.shape[0], idx+1))
+		# 2. Feature matching
+		print('Feature matching...')
+		matched_pairs = kd_tree_matching(previous_img, next_img, keypints1, descriptors1, keypints2, descriptors2)
+		# total_img = np.concatenate((img1, img2), axis=1)
+		# plot_matches(matched_pairs, total_img)
+		print('Already got matched keypoints!')
+		# 3. Apply RANSAC to find best offsets
+		print('[RANSAC] Finding best offsets for these pair of images...')
+		best_offset = RANSAC(matched_pairs[:, 1], matched_pairs[:, 0])
+		offsets.append(best_offset)
+		print('Already got best offsets!')
 
-	image_set_size = ['./parrington/prtn13.jpg', './parrington/prtn12.jpg']
-
-	print('[SIFT} Detecting features...')
-	img1 = np.asarray(Image.open(image_set_size[0]).convert('L'), dtype = 'float32')
-	img2 = np.asarray(Image.open(image_set_size[1]).convert('L'), dtype = 'float32')
-	sift_detector1 = SIFT(img1)
-	sift_detector2 = SIFT(img2)
-	keypints1, descriptors1 = sift_detector1.get_features()
-	keypints2, descriptors2 = sift_detector2.get_features()
-	print('{} features are extracted in first image'.format(descriptors1.shape[0]))
-	print('{} features are extracted in second image'.format(descriptors2.shape[0]))
-   
-	print('Feature matching...')
-	matched_pairs = kd_tree_matching(img1, img2, keypints1, descriptors1, keypints2, descriptors2)
-	total_img = np.concatenate((img1, img2), axis=1)
-	plot_matches(matched_pairs, total_img)
-	print('Already got matched keypoints!')
-
-	print('[RANSAC] Finding best homography H for these pair of images...')
-	RANSAC(matched_pairs[:, 0], matched_pairs[:, 1])
-    #  print ' | Find best shift using RANSAC .... '; sys.stdout.flush()
-    #     shift = findshift.RANSAC(matched_pairs)
-    #     shifts.append(shift)
-    #     print ' | | best shift ', shift
-    # print 'Completed feature matching! Here are all shifts:'; sys.stdout.flush()
-    # print shifts;  sys.stdout.flush()
+	# 4. stitch all images
+	print('Processing image stitching...')
+	result_image = stitching(image_path, offsets)
+	result_image.save('result.jpg')
+		

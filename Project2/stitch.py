@@ -1,0 +1,28 @@
+import numpy as np
+import cv2
+from PIL import Image
+
+def stitching(img_path, offsets):
+    img_list = [Image.open(path) for path in img_path]
+    dst_h, dst_w, _ = np.array(img_list[0]).shape
+
+    x_offest = 0
+    y_offest_max = -1*float("inf")
+    y_offest_min = float("inf")
+    for offest in offsets:
+        x_offest += offest[0]
+        if offest[1] < y_offest_min and offest[1] >= 0: 
+            y_offest_min = offest[1]
+        if offest[1] > y_offest_max and offest[1] < 0: 
+            y_offest_max = offest[1]
+
+    result_image = Image.new(mode="RGB", size=(dst_w+abs(x_offest), dst_h+abs(y_offest_min)+abs(y_offest_max)))
+
+    for i,img in enumerate(img_list):
+        final_offset = np.array([0,0])
+        for offet in offsets[:i+1]: 
+            final_offset += offet
+        result_image.paste(img, (abs(final_offset[0]), abs(y_offest_min)-final_offset[1]))
+    result_image.save('final.jpg')
+
+    return result_image

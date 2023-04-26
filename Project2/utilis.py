@@ -109,10 +109,13 @@ def get_keypoints(DOG_pyr, num_octave, s, subsample, contrast_threshold, curvatu
                             # print(center)
                             contrast_keypoints.append(raw_keypoints[-1])
                             # Compute the entries of the Hessian matrix at the extrema location.
-                            hessian = computeHessianAtCenterPixel(np.array(window))
-                            xy_hessian = hessian[:2, :2]
-                            Tr_H = np.trace(xy_hessian)
-                            Det_H = np.linalg.det(xy_hessian)
+                            dxx = window[1, 1, 2] - 2 * center + window[1, 1, 0]
+                            dyy = window[1, 2, 1] - 2 * center + window[1, 0, 1]
+                            dxy = 0.25 * (window[1, 2, 2] - window[1, 2, 0] - window[1, 0, 2] + window[1, 0, 0])
+                            H_xy =  np.array([[dxx, dxy], 
+                                        [dxy, dyy]])
+                            Tr_H = np.trace(H_xy)
+                            Det_H = np.linalg.det(H_xy)
                             # Dxx = np.sum(np.multiply(window[1, 0:3], xx))
                             # Dyy = np.sum(np.multiply(window[0:3, 1], yy))
                             # Dxy = np.sum(np.sum(np.multiply(window[0:3, 0:3], xy)))
@@ -125,6 +128,7 @@ def get_keypoints(DOG_pyr, num_octave, s, subsample, contrast_threshold, curvatu
                             if Det_H > 0:
                                 curvature_ratio = (Tr_H**2) / Det_H
                                 if curvature_ratio < curvature_threshold:
+                                    # print('cur:', curvature_ratio)
                                     # it is not an edge point
                                     curve_keypoints.append(raw_keypoints[-1])
                                     # Set the loc map to 1 at this point to indicate a keypoint.
@@ -241,8 +245,8 @@ def assign_orientation(kp_pyr, gaussain_pyr, s, num_octave, subsample):
                     peaks[peak_idx] = 0
                     peak_value, peak_idx = np.max(peaks), np.argmax(peaks)
 
-    for i in range(len(pos)):
-        print(i, np.asarray(pos[i]), orient[i], scale[i][2])
+    # for i in range(len(pos)):
+    #     print(i, np.asarray(pos[i]), orient[i], scale[i][2])
 
     # print(len(kp_pyr[0][0]), len(grad_pyr[0][0])) shape is the same
     return np.asarray(pos), np.asarray(orient), np.asarray(scale)
@@ -257,7 +261,7 @@ def generate_descriptor(kp_pos, gaussain_pyr, orient, scale, subsample):
     # The orientation histograms have 8 bins, each bin has pi/4 size
     orient_bin_spacing = np.pi / 4
     orient_angles = np.arange(-np.pi, np.pi, orient_bin_spacing)
-    print(orient_angles)
+    # print(orient_angles)
 
     # The feature grid is has 4x4 cells - feat_grid describes the cell center positions
     grid_spacing = 4
