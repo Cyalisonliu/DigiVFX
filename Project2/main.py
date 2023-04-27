@@ -5,7 +5,7 @@ import cv2
 from sift_detector import SIFT
 from feature_matching import kd_tree_matching
 from image_matching import RANSAC
-from wraping import warping, stitching
+from stitch import stitching
 from drawplot import plot_matches
 import matplotlib.pyplot as plt
 
@@ -19,7 +19,10 @@ if __name__ == '__main__':
 	parser.add_argument('--input_path', type=str, default='./parrington/prtn10.jpg', help='Input image file path')
 	args = parser.parse_args()
 
-	image_path = ['./photos/DSC_{}.jpg'.format(i) for i in range(6136, 6143)]
+	# image_path = ['./photos/DSC_{}.jpg'.format(i) for i in range(6136, 6143)]
+	image_path = ['./parrington/prtn17.jpg', './parrington/prtn16.jpg', './parrington/prtn15.jpg', './parrington/prtn14.jpg', './parrington/prtn13.jpg', './parrington/prtn12.jpg',
+	       './parrington/prtn11.jpg', './parrington/prtn10.jpg', './parrington/prtn09.jpg', './parrington/prtn08.jpg', './parrington/prtn07.jpg', './parrington/prtn06.jpg',
+		   './parrington/prtn05.jpg', './parrington/prtn04.jpg', './parrington/prtn03.jpg', './parrington/prtn02.jpg', './parrington/prtn01.jpg', './parrington/prtn00.jpg']
 	offsets = [[0,0]]
 	previous_img = None
 	next_img = None

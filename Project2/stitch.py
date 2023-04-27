@@ -17,12 +17,29 @@ def stitching(img_path, offsets):
             y_offest_max = offest[1]
 
     result_image = Image.new(mode="RGB", size=(dst_w+abs(x_offest), dst_h+abs(y_offest_min)+abs(y_offest_max)))
+    # store current width of the result picture
+    width = 0
 
     for i,img in enumerate(img_list):
         final_offset = np.array([0,0])
         for offet in offsets[:i+1]: 
             final_offset += offet
-        result_image.paste(img, (abs(final_offset[0]), abs(y_offest_min)-final_offset[1]))
+        if final_offset[0] != 0:
+            # all the image causing overlapping
+            # calculate the region two pictures overlap
+            overlap = width - abs(final_offset[0])
+            pixelrange_left = range(img_list[i-1].size(0) - overlap ,img_list[i-1].size(0))
+            pixelrange_right = range(0, overlap)
+            ### TODO ###
+            """
+            Linear blending on img_list[i-1] and img
+            """
+            # update current width
+            width = img.size(0) + abs(final_offset[0])
+        else:
+            # first image
+            result_image.paste(img, (abs(final_offset[0]), abs(y_offest_min)-final_offset[1]))
+            width = img.size(0) + abs(final_offset[0])
     result_image.save('final.jpg')
 
     return result_image
