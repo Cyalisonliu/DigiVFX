@@ -44,4 +44,4 @@ for i in range(7):
     cropped_img = new_img[:, left_edge:right_edge]
 
     # output the image
-    cv.imwrite(f"./cylin/img{i}.jpg", cropped_img)
+    cv.imwrite(f"./input/img{i}.jpg", cropped_img)

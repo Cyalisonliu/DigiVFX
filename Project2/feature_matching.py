@@ -1,7 +1,18 @@
 import numpy as np
 from sklearn.neighbors import KDTree
 
-def kd_tree_matching(img1, img2, kp1, des1, kp2, des2):
+def kd_tree_matching(img1, kp1, des1, kp2, des2):
+    """
+    Input:
+    img1 - array of the image on the LHS. Also seen as destination image
+    kp1 - N*2 keypoints array, N is the number of keypoints of the image on the LHS we found in SIFT
+    des1 - N*128 descriptors array, N is the number of keypoints of the image on the LHS we found in SIFT
+    kp2 - N*2 keypoints array, N is the number of keypoints of the image on the RHS we found in SIFT 
+    des2 - N*128 descriptors array, N is the number of keypoints of the image on the RHS we found in SIFT
+
+    Return:
+    matched_pairs: An array with the matched keypoints we found in RANSAC
+    """
     dist_threshold = 0.25
     h, w = img1.shape
     tree = KDTree(des2, leaf_size=2)

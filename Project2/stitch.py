@@ -8,12 +8,12 @@ def stitching(img_path, offsets):
     x_offest = 0
     y_offest_max = 0
     y_offest_min = float("inf")
-    for offest in offsets:
-        x_offest += offest[0]
-        if offest[1] < y_offest_min and offest[1] >= 0: 
-            y_offest_min = offest[1]
-        if offest[1] < 0: 
-            y_offest_max += abs(offest[1])
+    for offset in offsets:
+        x_offest += offset[0]
+        if offset[1] < y_offest_min and offset[1] >= 0: 
+            y_offest_min = offset[1]
+        if offset[1] < 0: 
+            y_offest_max += abs(offset[1])
 
     result_image = np.zeros((dst_h+abs(y_offest_min)+abs(y_offest_max), dst_w+abs(x_offest), 3))
     result_image[abs(y_offest_min): abs(y_offest_min)+dst_h, :dst_w] = img_list[0]
@@ -22,8 +22,8 @@ def stitching(img_path, offsets):
     # Each time, update previous image and paste the next image
     for i, (img1, img2) in enumerate(zip(img_list[:], img_list[1:])):
         final_offset = np.array([0,0])
-        for offet in offsets[:i+2]: 
-            final_offset += offet
+        for offset in offsets[:i+2]: 
+            final_offset += offset
         prev_pixels, prev_h, prev_w = img1, img1.shape[0], img1.shape[1]
         cur_pixels, cur_h, cur_w = img2, img2.shape[0], img2.shape[1]
         overlap = width - abs(final_offset[0])
