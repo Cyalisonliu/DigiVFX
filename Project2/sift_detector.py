@@ -6,26 +6,22 @@ from scipy.ndimage.filters import convolve
 from scipy.interpolate import interp2d
 
 from utilis import generate_pyramid, get_keypoints, assign_orientation, generate_descriptor
-from drawplot import draw_image, draw_keypoint
+from drawplot import draw_image, draw_keypoint, draw_final_kpts
 
 
 class SIFT(object):
-    def __init__(self, img, s=3, num_octave=3, sigma=1.8, curvature_threshold=7.0, contrast_threshold=4.0):
+    def __init__(self, img, s=3, num_octave=4, sigma=1.6, curvature_threshold=10.0, contrast_threshold=3.5):
         # Blur the image with a standard deviation of 0.5
         # Upsample the image by a factor of 2 using linear interpolation
-        # draw_image(img,'Original image')
         antialias_sigma = 0.5
         if antialias_sigma == 0:
             signal = img
         else:
             signal = gaussian_filter(img, sigma=antialias_sigma, mode='constant')
-        # draw_image(signal,'Blur first image')
-        # test = gaussian_filter(img, sigma=3.2)
-        # draw_image(test, 'sigma=3.2')
+
         # Upsample the image by a factor of 2 using linear interpolation
         h, w = signal.shape
         signal = cv2.resize(signal, (int(w*2), int(h*2)), interpolation=cv2.INTER_NEAREST)
-        # draw_image(signal, 'Blur 2x')
         self.subsample = [0.5]
         self.img = img
         self.signal = signal
@@ -40,10 +36,10 @@ class SIFT(object):
             1. Generate gaussain pyrimid and DoG pyrimid
         """
         gaussian_pyr, DOG_pyr, subsample = generate_pyramid(self.signal, self.num_octave, self.s, self.sigma, self.subsample)
-        # for i, gaussian_per in enumerate(gaussian_pyr):
-        #     draw_image(gaussian_per[0], f'Gaussain image ${i+1}')
-        # for i, dog_per in enumerate(DOG_pyr):
-        #     draw_image(dog_per[0], f'DOG image ${i+1}')
+        for i, gaussian_per in enumerate(gaussian_pyr[1]):
+            draw_image(gaussian_per, f'Gaussain image {i+1} 1x')
+        for i, dog_per in enumerate(DOG_pyr[1]):
+            draw_image(dog_per, f'DOG image {i+1} 1x')
 
         """
             2. Detect keypoints over DoG pyrimid
@@ -57,6 +53,6 @@ class SIFT(object):
         kp_pyr, orient, scale = assign_orientation(kp_pyr, gaussian_pyr, self.s, self.num_octave, subsample)
         kp_pyr, descriptor = generate_descriptor(kp_pyr, gaussian_pyr, orient, scale, subsample)
         # print(kp_pyr.shape, descriptor.shape)
-        # draw_keypoint(self.img, kp_pyr)
+        # draw_final_kpts(self.img, kp_pyr)
 
         return kp_pyr, descriptor

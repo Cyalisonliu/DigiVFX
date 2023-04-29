@@ -46,7 +46,7 @@ if __name__ == '__main__':
 		print('[RANSAC] Finding best offsets for these pair of images...')
 		best_offset = RANSAC(matched_pairs[:, 1], matched_pairs[:, 0])
 		offsets.append(best_offset)
-		print('Already got best offsets!')
+		print('Already got best offsets!', offsets)
 
 	# 4. stitch all images
 	print('Processing image stitching...')
