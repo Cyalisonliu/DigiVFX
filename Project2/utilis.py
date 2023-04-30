@@ -95,19 +95,12 @@ def get_keypoints(DOG_pyr, num_octave, s, subsample, contrast_threshold, curvatu
                             dxy = 0.25 * (window[1, 2, 2] - window[1, 2, 0] - window[1, 0, 2] + window[1, 0, 0])
                             H_xy =  np.array([[dxx, dxy], 
                                         [dxy, dyy]])
-                            Tr_H = np.trace(H_xy)
-                            Det_H = np.linalg.det(H_xy)
-                            # Dxx = np.sum(np.multiply(window[1, 0:3], xx))
-                            # Dyy = np.sum(np.multiply(window[0:3, 1], yy))
-                            # Dxy = np.sum(np.sum(np.multiply(window[0:3, 0:3], xy)))
-
-                            # Compute the trace and the determinant of the Hessian.
-                            # Tr_H = Dxx + Dyy
-                            # Det_H = Dxx*Dyy - Dxy**2
+                            trace_H = np.trace(H_xy)
+                            det_H = np.linalg.det(H_xy)
 
                             # Compute the ratio of the principal curvatures.
-                            if Det_H > 0:
-                                curvature_ratio = (Tr_H**2) / Det_H
+                            if det_H > 0:
+                                curvature_ratio = (trace_H**2) / det_H
                                 if curvature_ratio < curvature_threshold:
                                     # it is not an edge point
                                     curve_keypoints.append(raw_keypoints[-1])

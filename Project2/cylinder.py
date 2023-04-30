@@ -6,9 +6,9 @@ def convert(x, y, h, w, F):
     return (F * np.tan((x - w // 2) / F)) + w // 2, ((y - h // 2) / np.cos((x - w // 2) / F)) + h // 2
 
 # read files and set parameters
-for i in range(7):
-    img = cv.imread(f"./photos/DSC_{6136+i}.JPG")
-    h, w, F = img.shape[0], img.shape[1], 8*2316/4.5
+for i in range(5):
+    img = cv.imread(f"./photos/DSC_{i}.JPG")
+    h, w, F = img.shape[0], img.shape[1], 10*2316/4.5
 
     # set the configuration of new image
     new_img = np.zeros(img.shape, dtype=np.uint8)

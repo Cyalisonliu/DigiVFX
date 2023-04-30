@@ -41,8 +41,8 @@ def SIFT_get_features(img, draw, s=3, num_octave=4, sigma=1.6, curvature_thresho
         3. Assign orientations to the keypoints and get descriptor
     """
     kp_pyr, orient, scale = assign_orientation(kp_pyr, gaussian_pyr, s, num_octave, subsample)
-    kp_pyr, descriptor = generate_descriptor(kp_pyr, gaussian_pyr, orient, scale, subsample)
+    kp_pos, descriptor = generate_descriptor(kp_pyr, gaussian_pyr, orient, scale, subsample)
     if draw:
         draw_final_kpts(img, kp_pyr)
 
-    return kp_pyr, descriptor
+    return kp_pos, descriptor

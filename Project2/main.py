@@ -14,7 +14,7 @@ if __name__ == '__main__':
 	parser.add_argument('--draw_process', default=0, type=int, help='Set this to 1 is you want to see the process')
 	args = parser.parse_args()
 	darw = args.draw_process
-	# image_path = ['./parrington/prtn%02d.jpg' %i for i in range(17, -1, -1)]
+	# image_path = ['./parrington/prtn%02d.jpg' %i for i in range(3, -1, -1)]
 	image_path = ['./input/img{}.jpg'.format(i) for i in range(0, 5)]
 	if darw:
 		print(image_path)
