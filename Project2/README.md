@@ -1,6 +1,4 @@
-# High Dynamic Range Imaging
-
-# \[DVE\] project #2: Image stitching
+# Image stitching
 
 ##  Dependency
 
